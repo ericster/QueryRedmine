@@ -1,0 +1,45 @@
+    create VIEW redexcelView2 AS 
+    select subject, group_concat(c1.value separator '; ') as app, group_concat(c2.value separator '; ') as devices, group_concat(c3.value separator '; ') as plm, concat('http://redmine.telecom.sna.samsung.com/issues/', issues.id) as url, issue_statuses.name as status, group_concat(c4.value separator '; ') as type, author.mail as author_mail, assignee.mail as assignee_mail, issues.created_on,
+    case issue_statuses.name
+        when 'Resolved' Then issues.updated_on
+        else null
+    end as resolved_date,
+    case issue_statuses.name
+        when 'Resolved' Then datediff(issues.updated_on, issues.created_on)
+        else datediff(curdate(), issues.created_on)
+    end as days
+
+    # 6:plm 7:app 9:devices 32:issue_type
+
+    from issues
+    join issue_statuses on issues.status_id = issue_statuses.id 
+    join projects on issues.project_id = projects.id 
+    join users author on issues.author_id = author.id
+    join users assignee on issues.assigned_to_id = assignee.id
+
+    left join custom_values c1 on issues.id = c1.customized_id 
+    left join custom_values c2 on issues.id = c2.customized_id 
+    left join custom_values c3 on issues.id = c3.customized_id 
+    left join custom_values c4 on issues.id = c4.customized_id 
+
+    join redexcelSub2 on project_id = redexcelSub2.id
+
+    where issues.status_id not in (5, 6, 10, 12, 13, 14, 16, 19) and 
+		  c1.custom_field_id = '7' and
+		  c2.custom_field_id = '9' and
+		  c3.custom_field_id = '6' and
+		  c4.custom_field_id = '32' 
+    group by c1.custom_field_id, c1.customized_id
+    ,c2.custom_field_id, c2.customized_id
+    ,c3.custom_field_id, c3.customized_id
+    ,c4.custom_field_id, c4.customized_id
+    order by issues.id desc;
+
+create VIEW redexcelSub2 AS 
+    select p2.id
+    from projects p
+    left join projects as p1 on p1.parent_id = p.id
+    left join projects as p2 on p2.parent_id = p1.id
+    where p.id = 95;
+
+
