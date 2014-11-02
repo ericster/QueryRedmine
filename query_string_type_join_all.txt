@@ -1,0 +1,72 @@
+select subject, app, cv.value as devices, plm, issue_type, url, status, author_mail, assignee_mail, created_on,
+    case status
+        when 'Resolved' Then updated_on
+        else null
+    end as resolved_date,
+    case status
+        when 'Resolved' Then datediff(updated_on, created_on)
+        else datediff(curdate(), created_on)
+    end as days
+    from
+    (
+        select
+            issues.id,
+            issues.project_id,
+            projects.name as project,
+            issue_statuses.name as status,
+            author.mail as author_mail, assignee.mail as assignee_mail,
+            issues.subject, issues.created_on, issues.updated_on, issues.start_date,
+            concat('http://redmine.telecom.sna.samsung.com/issues/', issues.id) as url
+        from
+            issues
+	join issue_statuses on issues.status_id = issue_statuses.id 
+	join projects on issues.project_id = projects.id 
+	join users author on issues.author_id = author.id 
+	join users assignee on issues.assigned_to_id = assignee.id
+        where issues.status_id not in (5, 6, 10, 12, 13, 14, 16, 19) 
+
+        order by
+            projects.id, issues.created_on asc
+    ) a
+    join custom_values as cv on cv.customized_id = a.id
+    left join
+    (
+        select issues.id, group_concat(value separator '; ') as plm from issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '6'
+        group by custom_values.custom_field_id, custom_values.customized_id
+    ) plm
+    on a.id = plm.id
+    left join
+    (
+        select issues.id, group_concat(value separator '; ') as app from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '7'
+        group by custom_values.custom_field_id, custom_values.customized_id
+    ) app
+    on a.id = app.id
+    left join
+    (
+        select issues.id, group_concat(value separator '; ') as issue_type from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '32'
+        group by custom_values.custom_field_id, custom_values.customized_id
+    ) issue_type 
+    on a.id = issue_type.id
+    join
+    (
+        select p2.id
+        from projects p
+            left join projects as p1 on p1.parent_id = p.id
+            left join projects as p2 on p2.parent_id = p1.id
+        where
+            p.id = 95
+    ) vux_projects
+    on a.project_id = vux_projects.id
+    where
+            cv.custom_field_id = '9' and
+	    (cv.value like 'N910A%' OR cv.value like 'NDA%')
+    order by created_on desc \G
