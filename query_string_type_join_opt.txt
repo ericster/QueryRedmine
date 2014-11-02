@@ -1,5 +1,15 @@
-    select issues.id, issues.project_id, projects.name as project, c1.custom_field_id as field_id, group_concat(c1.value separator '; ') as app, group_concat(c2.value separator '; ') as devices, group_concat(c3.value separator '; ') as plm, group_concat(c4.value separator '; ') as type, issue_statuses.name as status, author.mail as author_mail, assignee.mail as assignee_mail
+    select issues.id, issues.project_id, projects.name as project, c1.custom_field_id as field_id, group_concat(c1.value separator '; ') as app, group_concat(c2.value separator '; ') as devices, group_concat(c3.value separator '; ') as plm, group_concat(c4.value separator '; ') as type, issue_statuses.name as status, author.mail as author_mail, assignee.mail as assignee_mail, issues.created_on,
+    case issue_statuses.name
+        when 'Resolved' Then issues.updated_on
+        else null
+    end as resolved_date,
+    case issue_statuses.name
+        when 'Resolved' Then datediff(issues.updated_on, issues.created_on)
+        else datediff(curdate(), issues.created_on)
+    end as days
+
     # 6:plm 7:app 9:devices 32:issue_type
+
     from issues
     join issue_statuses on issues.status_id = issue_statuses.id 
     join projects on issues.project_id = projects.id 
