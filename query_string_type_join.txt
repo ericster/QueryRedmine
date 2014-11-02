@@ -1,4 +1,5 @@
-select subject, app, devices, plm, issue_type, url, status, author_mail, assignee_mail, created_on,
+#select subject, app, devices, plm, issue_type, url, status, author_mail, assignee_mail, created_on,
+select a.id, a.project_id, project, app, devices, plm, issue_type, url, status, author_mail, assignee_mail,
     case status
         when 'Resolved' Then updated_on
         else null
@@ -74,4 +75,4 @@ select subject, app, devices, plm, issue_type, url, status, author_mail, assigne
             p.id = 95
     ) vux_projects
     on a.project_id = vux_projects.id
-    order by created_on desc \G
+    order by a.id desc 

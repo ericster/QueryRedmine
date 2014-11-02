@@ -1,17 +1,15 @@
-    select issues.id, issues.project_id, projects.name as project, devices,  issue_statuses.name as status
+    select issues.id, issues.project_id, projects.name as project, c1.custom_field_id as field_id, group_concat(c1.value separator '; ') as app, group_concat(c2.value separator '; ') as devices, group_concat(c3.value separator '; ') as plm, group_concat(c4.value separator '; ') as type, issue_statuses.name as status, author.mail as author_mail, assignee.mail as assignee_mail
+    # 6:plm 7:app 9:devices 32:issue_type
     from issues
     join issue_statuses on issues.status_id = issue_statuses.id 
     join projects on issues.project_id = projects.id 
+    join users author on issues.author_id = author.id
+    join users assignee on issues.assigned_to_id = assignee.id
 
-    left join
-    (
-        select issues.id, group_concat(value separator '; ') as devices from issues, custom_values
-        where
-            issues.id = custom_values.customized_id and
-            custom_values.custom_field_id = '9'
-        group by custom_values.custom_field_id, custom_values.customized_id
-    ) devices
-    on issues.id = devices.id
+    left join custom_values c1 on issues.id = c1.customized_id 
+    left join custom_values c2 on issues.id = c2.customized_id 
+    left join custom_values c3 on issues.id = c3.customized_id 
+    left join custom_values c4 on issues.id = c4.customized_id 
 
     join
     (
@@ -24,5 +22,13 @@
     ) vux_projects
     on project_id = vux_projects.id
 
-    where issues.status_id not in (5, 6, 10, 12, 13, 14, 16, 19) 
-    order by issues.id desc
+    where issues.status_id not in (5, 6, 10, 12, 13, 14, 16, 19) and 
+		  c1.custom_field_id = '7' and
+		  c2.custom_field_id = '9' and
+		  c3.custom_field_id = '6' and
+		  c4.custom_field_id = '32' 
+    group by c1.custom_field_id, c1.customized_id
+    ,c2.custom_field_id, c2.customized_id
+    ,c3.custom_field_id, c3.customized_id
+    ,c4.custom_field_id, c4.customized_id
+    order by issues.id desc 
