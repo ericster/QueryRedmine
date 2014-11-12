@@ -1,0 +1,133 @@
+select app, subject, description, devices, plm, issue_type, os, plm_priority, priority, apk_version, fw_version, occurence, url, status, author_mail, assignee_mail, created_on,
+    case status
+        when 'Resolved' Then updated_on
+        else null
+    end as resolved_date,
+    case status
+        when 'Resolved' Then datediff(updated_on, created_on)
+        else datediff(curdate(), created_on)
+    end as days
+
+    # 6:plm 7:app 9:devices 32:issue_type
+    # 3:apk ver 4:f/w ver 11:OS  18:PLM priority 30:occurence
+
+    from
+    (
+        select
+            issues.id,
+            issues.project_id,
+            projects.name as project,
+            issue_statuses.name as status,
+            author.mail as author_mail, assignee.mail as assignee_mail,
+            issues.subject, issues.description, issues.created_on, issues.updated_on, issues.start_date,
+            concat('http://redmine.telecom.sna.samsung.com/issues/', issues.id) as url
+        from
+            issues, issue_statuses, projects, users as author, users as assignee
+        where
+            issues.status_id = issue_statuses.id and
+            issues.status_id not in (5, 6, 10, 12, 13, 14, 16, 19) and
+            issues.project_id = projects.id and
+            issues.author_id = author.id and
+            issues.assigned_to_id = assignee.id
+        order by
+            projects.id, issues.created_on asc
+    ) a
+    left join
+    (
+        select issues.id, group_concat(value separator '; ') as devices from issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '9'
+        group by custom_values.custom_field_id, custom_values.customized_id
+    ) devices
+    on a.id = devices.id
+    left join
+    (
+        select issues.id, value as plm from issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '6'
+    ) plm
+    on a.id = plm.id
+    left join
+    (
+        select issues.id, value as app from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '7'
+    ) app
+    on a.id = app.id
+    left join
+    (
+        select issues.id, value as issue_type from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '32'
+    ) issue_type 
+    on a.id = issue_type.id
+
+    left join
+    (
+        select issues.id, value as os from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '11'
+    ) os 
+    on a.id = os.id
+
+    left join
+    (
+        select issues.id, value as plm_priority from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '18'
+    ) plm_priority 
+    on a.id = plm_priority.id
+
+    left join
+    (
+        select issues.id, value as apk_version from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '3'
+    ) apk_version 
+    on a.id = apk_version.id
+
+    left join
+    (
+        select issues.id, value as fw_version from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '4'
+    ) fw_version 
+    on a.id = fw_version.id
+
+    left join
+    (
+        select issues.id, value as occurence from  issues, custom_values
+        where
+            issues.id = custom_values.customized_id and
+            custom_values.custom_field_id = '30'
+    ) occurence 
+    on a.id = occurence.id
+
+    left join
+    (
+        select issues.id, enumerations.name as priority from  issues, enumerations
+        where
+            issues.priority_id = enumerations.id
+    ) priority 
+    on a.id = priority.id
+
+    join
+    (
+        select p2.id
+        from projects p
+            left join projects as p1 on p1.parent_id = p.id
+            left join projects as p2 on p2.parent_id = p1.id
+        where
+            p.id = 95
+    ) vux_projects
+    on a.project_id = vux_projects.id
+
+    order by created_on desc \G
