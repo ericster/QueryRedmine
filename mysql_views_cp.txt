@@ -1,0 +1,49 @@
+create VIEW vux_cp_issues AS
+    select 
+	issues.id, 
+	projects.name as project, 
+	issues.subject, 
+	issues.description, 
+	issue_statuses.name as status, 
+	en.name as priority,
+	group_concat(c2.value separator '; ') as devices, 
+	c3.value as plm, 
+	c4.value as type, 
+	author.mail as author_mail, 
+	assignee.mail as assignee_mail, 
+	issues.created_on,
+	c5.value as OS,
+	c6.value as plm_prioirty,
+	c7.value as apk_ver,
+	c8.value as fw_ver,
+	c9.value as occurence
+
+    # 6:plm 7:app 9:devices 32:issue_type
+    # 3:apk ver 4:f/w ver 11:OS  18:PLM priority 30:occurence
+
+    from issues
+    join issue_statuses on issues.status_id = issue_statuses.id 
+    join projects on issues.project_id = projects.id 
+    join users author on issues.author_id = author.id
+    join users assignee on issues.assigned_to_id = assignee.id
+
+    left join enumerations en on issues.priority_id = en.id 
+    left join custom_values c2 on issues.id = c2.customized_id and c2.custom_field_id = '9'
+    left join custom_values c3 on issues.id = c3.customized_id and c3.custom_field_id = '6'
+    left join custom_values c4 on issues.id = c4.customized_id and c4.custom_field_id = '32'
+    left join custom_values c5 on issues.id = c5.customized_id and c5.custom_field_id = '11'
+    left join custom_values c6 on issues.id = c6.customized_id and c6.custom_field_id = '18'
+    left join custom_values c7 on issues.id = c7.customized_id and c7.custom_field_id = '3' 
+    left join custom_values c8 on issues.id = c8.customized_id and c8.custom_field_id = '4'
+    left join custom_values c9 on issues.id = c9.customized_id and c9.custom_field_id = '30'
+
+    join redexcelSub2 on issues.project_id = redexcelSub2.id
+
+    where 
+	issues.status_id not in (5, 6, 10, 12, 13, 14, 16, 19) 
+
+    group by c2.custom_field_id, c2.customized_id
+    order by issues.id desc; 
+
+
+
